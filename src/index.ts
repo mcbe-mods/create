@@ -15,7 +15,7 @@ program
 program
   .command('init')
   .description('Create a new Minecraft BE addon project, or add packs to existing project')
-  .argument('<project-name>', 'Project name (ignored when run in existing project)')
+  .argument('[project-name]', 'Project name (prompted if omitted, ignored when run in existing project)')
   .option('-t, --template <template>', 'Template to use (default, explosive-bow)')
   .option('-y, --yes', 'Skip prompts, use defaults')
   .option('--no-install', 'Skip dependency installation')

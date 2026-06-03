@@ -333,12 +333,20 @@ async function reinitProject(projectDir: string) {
   }
 }
 
-export async function initCommand(name: string, options: InitOptions) {
+export async function initCommand(name: string | undefined, options: InitOptions) {
   const existingProjectDir = getProjectDir()
 
   if (existingProjectDir) {
     await reinitProject(existingProjectDir)
     return
+  }
+
+  if (!name) {
+    name = await p.text({
+      message: 'Project name:',
+      placeholder: 'my-addon',
+      validate: input => validateProjectName(input) || undefined,
+    }) as string
   }
 
   const nameError = validateProjectName(name)

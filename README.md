@@ -66,8 +66,9 @@ mcbe-create info      # Show project information
 
 ### `init`
 
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
+| Argument / Option | Type | Default | Description |
+|-------------------|------|---------|-------------|
+| `[project-name]` | `string` | — | Project name (prompted if omitted) |
 | `-t, --template <template>` | `string` | `'default'` | Template to use (`default`, `explosive-bow`) |
 | `-y, --yes` | `boolean` | `false` | Skip prompts, use defaults |
 
