@@ -14,6 +14,7 @@ export interface QuickStartConfig {
   hasScripts?: boolean
   language?: ScriptLanguage
   minEngineVersion: [number, number, number]
+  minecraftServerVersion?: string
   minecraft?: {
     developmentPath?: string
   }
