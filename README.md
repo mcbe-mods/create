@@ -98,7 +98,7 @@ my-addon/
 │   ├── behavior_pack/
 │   └── resource_pack/
 ├── pack/                       # .mcaddon output
-├── quick-start.json            # Project configuration
+├── mcbe.config.json            # Project configuration
 ├── package.json
 └── tsconfig.json               # Only for TypeScript projects
 ```

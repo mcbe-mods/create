@@ -12,7 +12,7 @@ const TS_FILTER = (src: string) => !src.endsWith('.ts')
 export async function buildCommand(options: { package?: boolean }) {
   const projectDir = getProjectDir()
   if (!projectDir) {
-    console.error(pc.red('  ✗ No quick-start.json found'))
+    console.error(pc.red('  ✗ No mcbe.config.json found'))
     process.exit(1)
   }
 

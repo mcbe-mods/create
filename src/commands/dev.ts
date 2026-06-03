@@ -24,7 +24,7 @@ function syncDir(src: string, dest: string, label: string) {
 export async function devCommand(options: DevOptions = {}) {
   const projectDir = getProjectDir()
   if (!projectDir) {
-    console.error(pc.red('  ✗ No quick-start.json found'))
+    console.error(pc.red('  ✗ No mcbe.config.json found'))
     process.exit(1)
   }
 
