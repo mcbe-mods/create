@@ -7,7 +7,7 @@ import { getMcPaths, getMcProjectDir } from '../utils/mcpath.js'
 export async function syncCommand() {
   const projectDir = getProjectDir()
   if (!projectDir) {
-    console.error(pc.red('  ✗ No quick-start.json found'))
+    console.error(pc.red('  ✗ No mcbe.config.json found'))
     process.exit(1)
   }
 

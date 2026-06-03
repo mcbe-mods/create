@@ -48,7 +48,7 @@ export function getMcPaths(projectDir?: string): McPaths | null {
   }
 
   if (projectDir) {
-    const configPath = join(projectDir, 'quick-start.json')
+    const configPath = join(projectDir, 'mcbe.config.json')
     if (existsSync(configPath)) {
       try {
         const config: QuickStartConfig = JSON.parse(readFileSync(configPath, 'utf-8'))

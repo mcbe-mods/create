@@ -2,7 +2,7 @@ import type { QuickStartConfig } from '../types.js'
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 
-const CONFIG_FILE = 'quick-start.json'
+const CONFIG_FILE = 'mcbe.config.json'
 
 export function getProjectDir(): string | null {
   let dir = process.cwd()
@@ -16,7 +16,7 @@ export function getProjectDir(): string | null {
 
 export function getProjectConfig(projectDir?: string): QuickStartConfig {
   const dir = projectDir || getProjectDir()
-  if (!dir) { throw new Error('No quick-start.json found. Are you in a project directory?') }
+  if (!dir) { throw new Error('No mcbe.config.json found. Are you in a project directory?') }
 
   const configPath = join(dir, CONFIG_FILE)
   if (!existsSync(configPath)) { throw new Error(`Config file not found: ${configPath}`) }
