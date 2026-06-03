@@ -66,6 +66,7 @@ async function createNewProject(name: string, options: InitOptions) {
   let packs: PackType[] = ['behavior_pack', 'resource_pack']
   let hasScripts = true
   let language: ScriptLanguage = 'typescript'
+  let mcVersion = '^1.11.0'
   let pm: PackageManager = detectPackageManager()
 
   if (!options.yes) {
@@ -103,6 +104,12 @@ async function createNewProject(name: string, options: InitOptions) {
             { value: 'explosive-bow', label: 'Explosive Bow', hint: 'Bow that spawns exploding crystals' },
           ],
         }) as TemplateName
+
+        mcVersion = await p.text({
+          message: '@minecraft/server version:',
+          placeholder: '^1.11.0',
+          initialValue: '^1.11.0',
+        }) as string
       }
     }
 
@@ -148,6 +155,7 @@ async function createNewProject(name: string, options: InitOptions) {
     uuids,
     hasScripts: packs.includes('behavior_pack') ? hasScripts : undefined,
     language: packs.includes('behavior_pack') && hasScripts ? language : undefined,
+    minecraftServerVersion: hasScripts ? mcVersion : undefined,
     minEngineVersion: [1, 21, 0],
   }
 
@@ -194,7 +202,7 @@ async function createNewProject(name: string, options: InitOptions) {
     version: '0.1.0',
     private: true,
     license: 'MIT',
-    dependencies: hasScripts ? { '@minecraft/server': '^1.11.0' } : {},
+    dependencies: hasScripts ? { '@minecraft/server': mcVersion } : {},
   }
   writeFileSync(join(projectDir, 'package.json'), JSON.stringify(pkg, null, 2))
 
