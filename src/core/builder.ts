@@ -1,17 +1,8 @@
 import type { InlineConfig } from 'vite'
-import type { BuildOptions } from '../types.js'
+import type { BpManifest, BuildOptions } from '../types.js'
 import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { build } from 'vite'
-
-export interface ManifestModule {
-  type: string
-  entry?: string
-}
-
-export interface BpManifest {
-  modules?: ManifestModule[]
-}
 
 export function resolveEntry(projectDir: string): { entry: string, entryFileNames: string } | null {
   const manifestPath = join(projectDir, 'src', 'behavior_pack', 'manifest.json')
@@ -32,6 +23,16 @@ export function resolveEntry(projectDir: string): { entry: string, entryFileName
   return { entry, entryFileNames }
 }
 
+function readExternals(projectDir: string): string[] {
+  const manifestPath = join(projectDir, 'src', 'behavior_pack', 'manifest.json')
+  if (!existsSync(manifestPath)) { return [] }
+  try {
+    const manifest: BpManifest = JSON.parse(readFileSync(manifestPath, 'utf-8'))
+    return (manifest.dependencies || []).filter(d => d.module_name).map(d => d.module_name!)
+  }
+  catch { return [] }
+}
+
 export async function runBuild(options: BuildOptions): Promise<void> {
   const config: InlineConfig = {
     root: options.projectDir,
@@ -47,7 +48,7 @@ export async function runBuild(options: BuildOptions): Promise<void> {
       minify: options.mode === 'production',
       sourcemap: options.mode === 'development',
       rollupOptions: {
-        external: ['@minecraft/server'],
+        external: readExternals(options.projectDir),
         output: {
           entryFileNames: options.entryFileNames,
         },
@@ -73,7 +74,7 @@ export async function runWatchBuild(options: BuildOptions): Promise<void> {
       minify: false,
       sourcemap: true,
       rollupOptions: {
-        external: ['@minecraft/server'],
+        external: readExternals(options.projectDir),
         output: {
           entryFileNames: options.entryFileNames,
         },

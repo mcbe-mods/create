@@ -30,6 +30,22 @@ export interface McPaths {
   developmentResourcePacks: string
 }
 
+export interface ManifestDependency {
+  module_name?: string
+  uuid?: string
+  version: string | number[]
+}
+
+export interface ManifestModule {
+  type: string
+  entry?: string
+}
+
+export interface BpManifest {
+  modules?: ManifestModule[]
+  dependencies?: ManifestDependency[]
+}
+
 export interface BuildOptions {
   entry: string
   projectDir: string
