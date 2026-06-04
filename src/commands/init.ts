@@ -66,7 +66,7 @@ async function createNewProject(name: string, options: InitOptions) {
   let packs: PackType[] = ['behavior_pack', 'resource_pack']
   let hasScripts = true
   let language: ScriptLanguage = 'typescript'
-  let mcVersion = '^1.11.0'
+  let mcVersion = '1.11.0'
   let pm: PackageManager = detectPackageManager()
 
   if (!options.yes) {
@@ -107,8 +107,8 @@ async function createNewProject(name: string, options: InitOptions) {
 
         mcVersion = await p.text({
           message: '@minecraft/server version:',
-          placeholder: '^1.11.0',
-          initialValue: '^1.11.0',
+          placeholder: '1.11.0',
+          initialValue: '1.11.0',
         }) as string
       }
     }

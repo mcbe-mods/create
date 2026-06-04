@@ -30,7 +30,7 @@ export function generateBpManifest(config: QuickStartConfig): object {
   if (scriptModule) {
     (manifest.dependencies as Array<Record<string, unknown>>).push({
       module_name: '@minecraft/server',
-      version: config.minecraftServerVersion || '^1.11.0',
+      version: config.minecraftServerVersion || '1.11.0',
     })
   }
 
