@@ -10,7 +10,7 @@ export function generateBpManifest(config: QuickStartConfig): object {
         language: 'javascript' as const,
         uuid: config.uuids.module,
         entry: 'scripts/main.js',
-        version: [1, 0, 0] as [number, number, number],
+        version: parseVersion(config.version) as [number, number, number],
       }
     : undefined
 
@@ -37,7 +37,7 @@ export function generateBpManifest(config: QuickStartConfig): object {
   if (config.uuids.resourcePack) {
     (manifest.dependencies as Array<Record<string, unknown>>).push({
       uuid: config.uuids.resourcePack,
-      version: [1, 0, 0],
+      version: parseVersion(config.version),
     })
   }
 
@@ -69,7 +69,7 @@ export function generateRpManifest(config: QuickStartConfig): object {
     modules: [
       {
         type: 'resources',
-        version: [1, 0, 0],
+        version: parseVersion(config.version),
         uuid: config.uuids.module,
       },
     ],
@@ -79,7 +79,7 @@ export function generateRpManifest(config: QuickStartConfig): object {
   if (config.uuids.behaviorPack) {
     (manifest.dependencies as Array<Record<string, unknown>>).push({
       uuid: config.uuids.behaviorPack,
-      version: [1, 0, 0],
+      version: parseVersion(config.version),
     })
   }
 
