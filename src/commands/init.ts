@@ -1,6 +1,6 @@
 import type { PackageManager, PackType, QuickStartConfig, ScriptLanguage, TemplateName } from '../types.js'
 import { execSync } from 'node:child_process'
-import { copyFileSync, existsSync, mkdirSync, writeFileSync } from 'node:fs'
+import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import process from 'node:process'
 import { fileURLToPath } from 'node:url'
@@ -13,6 +13,7 @@ import { validateProjectName } from '../utils/validation.js'
 
 const CLI_ROOT = fileURLToPath(new URL('../..', import.meta.url))
 const TEMPLATES_DIR = join(CLI_ROOT, 'templates')
+const CLI_VERSION = JSON.parse(readFileSync(join(CLI_ROOT, 'package.json'), 'utf-8')).version
 
 interface InitOptions {
   template?: string
@@ -202,6 +203,14 @@ async function createNewProject(name: string, options: InitOptions) {
     version: '0.1.0',
     private: true,
     license: 'MIT',
+    scripts: {
+      dev: 'mcbe-create dev',
+      devsync: 'mcbe-create dev --sync',
+      build: 'mcbe-create build',
+    },
+    devDependencies: {
+      '@mcbe-mods/create': `^${CLI_VERSION}`,
+    },
     dependencies: hasScripts ? { '@minecraft/server': mcVersion } : {},
   }
   writeFileSync(join(projectDir, 'package.json'), JSON.stringify(pkg, null, 2))
