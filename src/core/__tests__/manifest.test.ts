@@ -66,12 +66,19 @@ describe('generateBpManifest', () => {
   it('should include author in metadata when provided', () => {
     const config = { ...baseConfig, author: 'TestAuthor' }
     const manifest = generateBpManifest(config) as Record<string, unknown>
-    expect(manifest.metadata).toEqual({ authors: ['TestAuthor'] })
+    expect(manifest.metadata).toEqual({
+      license: 'MIT',
+      url: 'https://github.com/mcbe-mods',
+      authors: ['TestAuthor'],
+    })
   })
 
-  it('should omit metadata when no author', () => {
-    const manifest = generateBpManifest(baseConfig)
-    expect(manifest).not.toHaveProperty('metadata')
+  it('should include license and url in metadata when no author', () => {
+    const manifest = generateBpManifest(baseConfig) as Record<string, unknown>
+    expect(manifest.metadata).toEqual({
+      license: 'MIT',
+      url: 'https://github.com/mcbe-mods',
+    })
   })
 
   it('should parse version correctly', () => {
@@ -108,6 +115,24 @@ describe('generateRpManifest', () => {
     expect(manifest.dependencies).toContainEqual({
       uuid: baseConfig.uuids.behaviorPack,
       version: [1, 0, 0],
+    })
+  })
+
+  it('should include license and url in metadata', () => {
+    const manifest = generateRpManifest(baseConfig) as Record<string, unknown>
+    expect(manifest.metadata).toEqual({
+      license: 'MIT',
+      url: 'https://github.com/mcbe-mods',
+    })
+  })
+
+  it('should include author in rp metadata when provided', () => {
+    const config = { ...baseConfig, author: 'TestAuthor' }
+    const manifest = generateRpManifest(config) as Record<string, unknown>
+    expect(manifest.metadata).toEqual({
+      license: 'MIT',
+      url: 'https://github.com/mcbe-mods',
+      authors: ['TestAuthor'],
     })
   })
 

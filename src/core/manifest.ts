@@ -41,10 +41,12 @@ export function generateBpManifest(config: QuickStartConfig): object {
     })
   }
 
+  manifest.metadata = {
+    license: 'MIT',
+    url: 'https://github.com/mcbe-mods',
+  }
   if (config.author) {
-    manifest.metadata = {
-      authors: [config.author],
-    }
+    (manifest.metadata as Record<string, unknown>).authors = [config.author]
   }
 
   return manifest
@@ -79,6 +81,14 @@ export function generateRpManifest(config: QuickStartConfig): object {
       uuid: config.uuids.behaviorPack,
       version: [1, 0, 0],
     })
+  }
+
+  manifest.metadata = {
+    license: 'MIT',
+    url: 'https://github.com/mcbe-mods',
+  }
+  if (config.author) {
+    (manifest.metadata as Record<string, unknown>).authors = [config.author]
   }
 
   return manifest
