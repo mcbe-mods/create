@@ -4,20 +4,24 @@ export interface UUIDs {
   module: string
 }
 
+// Config stored in package.json.mcbe
+export interface McbeConfig {
+  uuids?: Partial<UUIDs>
+  minEngineVersion: [number, number, number]
+}
+
+// Full project config assembled at runtime from multiple sources
 export interface QuickStartConfig {
   name: string
   version: string
   author?: string
   description?: string
-  template: string
-  uuids: UUIDs
-  hasScripts?: boolean
+  license?: string
+  homepage?: string
+  uuids: Partial<UUIDs>
+  hasScripts: boolean
   language?: ScriptLanguage
   minEngineVersion: [number, number, number]
-  minecraftServerVersion?: string
-  minecraft?: {
-    developmentPath?: string
-  }
 }
 
 export type ScriptLanguage = 'typescript' | 'javascript'

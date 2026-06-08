@@ -58,7 +58,7 @@ Produces a `.mcaddon` file in the `pack/` directory.
 
 ```bash
 mcbe-create sync      # Manual one-shot sync dist/ to Minecraft
-mcbe-create manifest  # Regenerate manifest.json from config
+mcbe-create manifest  # Patch manifest.json from project config
 mcbe-create info      # Show project information
 ```
 
@@ -98,8 +98,7 @@ my-addon/
 │   ├── behavior_pack/
 │   └── resource_pack/
 ├── pack/                       # .mcaddon output
-├── mcbe.config.json            # Project configuration
-├── package.json
+├── package.json                # Contains "mcbe" field for configuration
 └── tsconfig.json               # Only for TypeScript projects
 ```
 

@@ -1,53 +1,71 @@
-import type { QuickStartConfig } from '../types.js'
+import type { McbeConfig, QuickStartConfig, ScriptLanguage } from '../types.js'
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
+import process from 'node:process'
 
-const CONFIG_FILE = 'mcbe.config.json'
+const CONFIG_KEY = 'mcbe'
 
-export function getProjectDir(): string | null {
-  let dir = process.cwd()
-  while (true) {
-    if (existsSync(join(dir, CONFIG_FILE))) { return dir }
-    const parent = join(dir, '..')
-    if (parent === dir) { return null }
-    dir = parent
+function getRootPkg(dir: string): Record<string, unknown> {
+  const pkgPath = join(dir, 'package.json')
+  if (!existsSync(pkgPath)) { throw new Error(`No package.json found in ${dir}`) }
+  return JSON.parse(readFileSync(pkgPath, 'utf-8'))
+}
+
+export function getProjectDir(): string {
+  const dir = process.cwd()
+  const pkg = getRootPkg(dir)
+  if (!pkg[CONFIG_KEY]) { throw new Error('Not in a project directory: package.json is missing "mcbe" field') }
+  return dir
+}
+
+function inferHasScripts(dir: string): boolean {
+  const manifestPath = join(dir, 'src', 'behavior_pack', 'manifest.json')
+  if (!existsSync(manifestPath)) { return false }
+  try {
+    const manifest = JSON.parse(readFileSync(manifestPath, 'utf-8'))
+    return manifest.modules?.some((m: { type: string }) => m.type === 'script') ?? false
   }
+  catch { return false }
+}
+
+function inferLanguage(dir: string): ScriptLanguage | undefined {
+  if (!inferHasScripts(dir)) { return undefined }
+  return existsSync(join(dir, 'tsconfig.json')) ? 'typescript' : 'javascript'
 }
 
 export function getProjectConfig(projectDir?: string): QuickStartConfig {
   const dir = projectDir || getProjectDir()
-  if (!dir) { throw new Error('No mcbe.config.json found. Are you in a project directory?') }
+  const pkg = getRootPkg(dir)
+  const mcbe = pkg[CONFIG_KEY] as McbeConfig | undefined
+  if (!mcbe) { throw new Error('package.json is missing "mcbe" field') }
 
-  const configPath = join(dir, CONFIG_FILE)
-  if (!existsSync(configPath)) { throw new Error(`Config file not found: ${configPath}`) }
-
-  return JSON.parse(readFileSync(configPath, 'utf-8'))
+  return {
+    name: pkg.name as string || '',
+    version: pkg.version as string || '0.1.0',
+    author: pkg.author as string | undefined,
+    description: pkg.description as string | undefined,
+    license: pkg.license as string | undefined,
+    homepage: pkg.homepage as string | undefined,
+    uuids: mcbe.uuids ?? {},
+    hasScripts: inferHasScripts(dir),
+    language: inferLanguage(dir),
+    minEngineVersion: mcbe.minEngineVersion,
+  }
 }
 
-export function writeProjectConfig(config: QuickStartConfig, projectDir?: string): void {
-  const dir = projectDir || getProjectDir()
-  if (!dir) { throw new Error('No project directory found') }
-
-  const configPath = join(dir, CONFIG_FILE)
-  writeFileSync(configPath, JSON.stringify(config, null, 2))
-}
-
-export function createProjectConfig(
-  projectDir: string,
-  config: QuickStartConfig,
-): void {
-  const configPath = join(projectDir, CONFIG_FILE)
-  writeFileSync(configPath, JSON.stringify(config, null, 2))
-}
-
-export function updateProjectConfig(
-  projectDir: string,
-  partial: Partial<QuickStartConfig>,
-): QuickStartConfig {
-  const config = getProjectConfig(projectDir)
-  const updated = { ...config, ...partial }
-  writeProjectConfig(updated, projectDir)
-  return updated
+export function writeMcbeConfig(projectDir: string, config: Partial<McbeConfig>): void {
+  const pkgPath = join(projectDir, 'package.json')
+  const pkg = getRootPkg(projectDir)
+  const existing = (pkg[CONFIG_KEY] as Record<string, unknown>) || {}
+  const merged: Record<string, unknown> = { ...existing }
+  if (config.uuids) {
+    merged.uuids = { ...(existing.uuids as Record<string, unknown> || {}), ...config.uuids }
+  }
+  if (config.minEngineVersion) {
+    merged.minEngineVersion = config.minEngineVersion
+  }
+  pkg[CONFIG_KEY] = merged
+  writeFileSync(pkgPath, `${JSON.stringify(pkg, null, 2)}\n`)
 }
 
 export function parseVersion(version: string): [number, number, number] {
@@ -57,4 +75,12 @@ export function parseVersion(version: string): [number, number, number] {
     parts[1] !== undefined ? Number(parts[1]) : 0,
     parts[2] !== undefined ? Number(parts[2]) : 0,
   ]
+}
+
+export function getMcDependencyVersion(projectDir: string, moduleName: string): string | undefined {
+  const pkg = getRootPkg(projectDir)
+  const allDeps = { ...(pkg.devDependencies as Record<string, string> || {}), ...(pkg.dependencies as Record<string, string> || {}) }
+  const version = allDeps[moduleName]
+  if (!version) { return undefined }
+  return version.replace(/^[~^>=<]+\s*/, '')
 }
