@@ -1,13 +1,14 @@
-import type { PackageManager, PackType, QuickStartConfig, ScriptLanguage, TemplateName } from '../types.js'
+import type { McbeConfig, PackageManager, PackType, ScriptLanguage, TemplateName } from '../types.js'
 import { execSync } from 'node:child_process'
 import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import process from 'node:process'
 import { fileURLToPath } from 'node:url'
 import * as p from '@clack/prompts'
+import { isCancel } from '@clack/prompts'
 import pc from 'picocolors'
 import { writeManifest } from '../core/manifest.js'
-import { createProjectConfig, getProjectConfig, getProjectDir, updateProjectConfig } from '../core/project.js'
+import { getProjectConfig, getProjectDir, writeMcbeConfig } from '../core/project.js'
 import { generateUUIDs } from '../utils/uuid.js'
 import { validateProjectName } from '../utils/validation.js'
 
@@ -39,6 +40,11 @@ function detectPackageManager(): PackageManager {
       return 'npm'
     }
   }
+}
+
+function onCancel() {
+  p.cancel('Cancelled')
+  process.exit(0)
 }
 
 function copyTemplateScript(templateDir: string, destDir: string, language: ScriptLanguage) {
@@ -81,12 +87,14 @@ async function createNewProject(name: string, options: InitOptions) {
         { value: 'resource_pack', label: 'Resource Pack', hint: 'Textures, sounds, models' },
       ],
     }) as PackType[]
+    if (isCancel(packs)) { onCancel() }
 
     if (packs.includes('behavior_pack')) {
       hasScripts = await p.confirm({
         message: 'Use Minecraft Script API?',
         initialValue: true,
       }) as boolean
+      if (isCancel(hasScripts)) { onCancel() }
 
       if (hasScripts) {
         language = await p.select({
@@ -96,6 +104,7 @@ async function createNewProject(name: string, options: InitOptions) {
             { value: 'javascript', label: 'JavaScript', hint: 'No compilation needed' },
           ],
         }) as ScriptLanguage
+        if (isCancel(language)) { onCancel() }
 
         template = await p.select({
           message: 'Select a template:',
@@ -105,12 +114,14 @@ async function createNewProject(name: string, options: InitOptions) {
             { value: 'explosive-bow', label: 'Explosive Bow', hint: 'Bow that spawns exploding crystals' },
           ],
         }) as TemplateName
+        if (isCancel(template)) { onCancel() }
 
         mcVersion = await p.text({
           message: '@minecraft/server version:',
           placeholder: mcVersion,
           initialValue: mcVersion,
         }) as string
+        if (isCancel(mcVersion)) { onCancel() }
       }
     }
 
@@ -123,16 +134,19 @@ async function createNewProject(name: string, options: InitOptions) {
         { value: 'yarn', label: 'yarn' },
       ],
     }) as PackageManager
+    if (isCancel(pm)) { onCancel() }
 
     author = await p.text({
       message: 'Author:',
       placeholder: 'Your name',
     }) as string
+    if (isCancel(author)) { onCancel() }
 
     description = await p.text({
       message: 'Description:',
       placeholder: 'My Minecraft BE addon',
     }) as string
+    if (isCancel(description)) { onCancel() }
 
     p.outro('Creating project...')
   }
@@ -142,28 +156,46 @@ async function createNewProject(name: string, options: InitOptions) {
 
   template = template || 'default'
 
-  const uuids = generateUUIDs()
-  if (!packs.includes('resource_pack')) {
-    uuids.resourcePack = undefined
-  }
-
-  const config: QuickStartConfig = {
-    name,
-    version: '0.1.0',
-    author: author || undefined,
-    description: description || undefined,
-    template,
-    uuids,
-    hasScripts: packs.includes('behavior_pack') ? hasScripts : undefined,
-    language: packs.includes('behavior_pack') && hasScripts ? language : undefined,
-    minecraftServerVersion: hasScripts ? mcVersion : undefined,
+  const newUuids = generateUUIDs()
+  const mcbeConfig: McbeConfig = {
+    uuids: {
+      behaviorPack: newUuids.behaviorPack,
+      resourcePack: packs.includes('resource_pack') ? newUuids.resourcePack : undefined,
+      module: (packs.includes('behavior_pack') && hasScripts) ? newUuids.module : undefined,
+    },
     minEngineVersion: [1, 21, 0],
   }
+
+  const pkg = {
+    name,
+    type: 'module',
+    version: '0.1.0',
+    private: true,
+    license: 'MIT',
+    author: author || undefined,
+    description: description || undefined,
+    scripts: {
+      'dev': 'mcbe-create dev',
+      'dev:sync': 'mcbe-create dev --sync',
+      'build': 'mcbe-create build',
+    },
+    devDependencies: {
+      '@mcbe-mods/create': `^${CLI_VERSION}`,
+    },
+    dependencies: (packs.includes('behavior_pack') && hasScripts) ? { '@minecraft/server': mcVersion } : {},
+    mcbe: mcbeConfig,
+  }
+  mkdirSync(projectDir, { recursive: true })
+  writeFileSync(join(projectDir, 'package.json'), `${JSON.stringify(pkg, null, 2)}\n`)
+
+  writeFileSync(join(projectDir, '.gitignore'), ['node_modules', 'dist', 'pack', '*.local'].join('\n'))
+
+  const config = getProjectConfig(projectDir)
 
   if (packs.includes('behavior_pack')) {
     const bpDir = join(projectDir, 'src', 'behavior_pack')
     mkdirSync(bpDir, { recursive: true })
-    writeManifest(bpDir, 'behavior_pack', config)
+    writeManifest(bpDir, 'behavior_pack', config, mcVersion)
     writeLang(bpDir, name, description)
 
     if (hasScripts) {
@@ -197,31 +229,9 @@ async function createNewProject(name: string, options: InitOptions) {
     writeLang(rpDir, name, description)
   }
 
-  const pkg = {
-    name,
-    type: 'module',
-    version: '0.1.0',
-    private: true,
-    license: 'MIT',
-    scripts: {
-      dev: 'mcbe-create dev',
-      devsync: 'mcbe-create dev --sync',
-      build: 'mcbe-create build',
-    },
-    devDependencies: {
-      '@mcbe-mods/create': `^${CLI_VERSION}`,
-    },
-    dependencies: hasScripts ? { '@minecraft/server': mcVersion } : {},
-  }
-  writeFileSync(join(projectDir, 'package.json'), JSON.stringify(pkg, null, 2))
-
-  writeFileSync(join(projectDir, '.gitignore'), ['node_modules', 'dist', 'pack', '*.local'].join('\n'))
-
-  createProjectConfig(projectDir, config)
-
   if (options.install !== false) {
     console.log(`  Installing dependencies with ${pc.cyan(pm)}...`)
-    const installCmd = pm === 'npm' ? 'npm install' : `${pm} install`
+    const installCmd = `${pm} install`
     try {
       execSync(installCmd, { cwd: projectDir, stdio: 'inherit' })
     }
@@ -233,11 +243,13 @@ async function createNewProject(name: string, options: InitOptions) {
   console.log()
   console.log(pc.green(`  ✓ Project "${name}" created!`))
   console.log()
+
+  const runCmd = pm === 'npm' ? 'npm run' : pm
   console.log(`  ${pc.dim('Next steps:')}`)
   console.log(`    ${pc.cyan(`cd ${name}`)}`)
-  console.log(`    ${pc.cyan('mcbe-create dev')}         ${pc.dim('Start development mode')}`)
-  console.log(`    ${pc.cyan('mcbe-create dev --sync')}  ${pc.dim('Start dev with auto MC sync')}`)
-  console.log(`    ${pc.cyan('mcbe-create build')}       ${pc.dim('Build and package')}`)
+  console.log(`    ${pc.cyan(`${runCmd} dev`)}             ${pc.dim('Start development mode')}`)
+  console.log(`    ${pc.cyan(`${runCmd} dev:sync`)}        ${pc.dim('Start dev with auto MC sync')}`)
+  console.log(`    ${pc.cyan(`${runCmd} build`)}           ${pc.dim('Build and package')}`)
   console.log()
 }
 
@@ -256,19 +268,26 @@ async function reinitProject(projectDir: string) {
   console.log()
 
   const additions: string[] = []
+  const uuids = config.uuids
 
   if (!hasBp) {
     const addBp = await p.confirm({
       message: 'Add Behavior Pack?',
       initialValue: true,
     })
+    if (isCancel(addBp)) { onCancel() }
     if (addBp) {
       additions.push('behavior_pack')
+      const newUuids = generateUUIDs()
+      writeMcbeConfig(projectDir, {
+        uuids: { behaviorPack: newUuids.behaviorPack, module: newUuids.module },
+      })
 
       const addScripts = await p.confirm({
         message: 'Use Minecraft Script API?',
         initialValue: true,
       })
+      if (isCancel(addScripts)) { onCancel() }
       if (addScripts) {
         const lang = await p.select({
           message: 'Script language:',
@@ -277,20 +296,14 @@ async function reinitProject(projectDir: string) {
             { value: 'javascript', label: 'JavaScript' },
           ],
         }) as ScriptLanguage
-
-        const uuids = generateUUIDs()
-        const updated = updateProjectConfig(projectDir, {
-          uuids: { ...config.uuids, behaviorPack: uuids.behaviorPack, module: uuids.module },
-          hasScripts: true,
-          language: lang,
-        })
+        if (isCancel(lang)) { onCancel() }
 
         const bpDir = join(projectDir, 'src', 'behavior_pack')
         mkdirSync(bpDir, { recursive: true })
-        writeManifest(bpDir, 'behavior_pack', updated)
+        writeManifest(bpDir, 'behavior_pack', getProjectConfig(projectDir))
         writeLang(bpDir, config.name, config.description || '')
 
-        const templateDir = join(TEMPLATES_DIR, config.template)
+        const templateDir = join(TEMPLATES_DIR, 'default')
         if (existsSync(templateDir)) {
           copyTemplateScript(templateDir, bpDir, lang)
         }
@@ -311,28 +324,20 @@ async function reinitProject(projectDir: string) {
           writeFileSync(join(projectDir, 'tsconfig.json'), JSON.stringify(tsconfig, null, 2))
         }
       }
-      else {
-        updateProjectConfig(projectDir, {
-          hasScripts: false,
-          language: undefined,
-        })
-      }
     }
   }
 
-  if (!hasRp && config.uuids.resourcePack) {
+  if (!hasRp) {
     const addRp = await p.confirm({
       message: 'Add Resource Pack?',
       initialValue: true,
     })
+    if (isCancel(addRp)) { onCancel() }
     if (addRp) {
       additions.push('resource_pack')
-
-      if (!hasBp) {
-        const uuids = generateUUIDs()
-        updateProjectConfig(projectDir, {
-          uuids: { ...config.uuids, resourcePack: uuids.resourcePack },
-        })
+      if (!uuids.resourcePack) {
+        const newUuids = generateUUIDs()
+        writeMcbeConfig(projectDir, { uuids: { resourcePack: newUuids.resourcePack } })
       }
 
       const rpDir = join(projectDir, 'src', 'resource_pack')
@@ -351,11 +356,16 @@ async function reinitProject(projectDir: string) {
 }
 
 export async function initCommand(name: string | undefined, options: InitOptions) {
-  const existingProjectDir = getProjectDir()
+  try {
+    const existingProjectDir = getProjectDir()
 
-  if (existingProjectDir) {
-    await reinitProject(existingProjectDir)
-    return
+    if (existingProjectDir) {
+      await reinitProject(existingProjectDir)
+      return
+    }
+  }
+  catch {
+    // Not in an existing project, proceed with creating new one
   }
 
   if (!name) {
@@ -364,6 +374,7 @@ export async function initCommand(name: string | undefined, options: InitOptions
       placeholder: 'my-addon',
       validate: input => validateProjectName(input) || undefined,
     }) as string
+    if (isCancel(name)) { onCancel() }
   }
 
   const nameError = validateProjectName(name)

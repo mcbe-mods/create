@@ -6,11 +6,6 @@ import { getMcPaths, getMcProjectDir } from '../utils/mcpath.js'
 
 export async function infoCommand() {
   const projectDir = getProjectDir()
-  if (!projectDir) {
-    console.log(pc.red('Not in a project directory'))
-    process.exit(1)
-  }
-
   const config = getProjectConfig(projectDir)
   const mcPaths = getMcPaths(projectDir)
   const distDir = join(projectDir, 'dist')
@@ -36,7 +31,7 @@ export async function infoCommand() {
   console.log(`  ${pc.bold('Version:')}    ${config.version}`)
   if (config.author) { console.log(`  ${pc.bold('Author:')}    ${config.author}`) }
   if (config.description) { console.log(`  ${pc.bold('Desc:')}      ${config.description}`) }
-  console.log(`  ${pc.bold('Template:')}  ${config.template}`)
+  console.log(`  ${pc.bold('License:')}   ${config.license || '-'}`)
   console.log(`  ${pc.bold('Scripts:')}   ${config.hasScripts ? '✓' : '✗'} ${config.language || '-'}`)
   console.log(`  ${pc.bold('Resource:')}  ${hasRp ? '✓' : '✗'}`)
   console.log(`  ${pc.bold('Minecraft:')} ${mcConnected ? '✓' : '✗'} ${mcInfo}`)

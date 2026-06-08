@@ -5,12 +5,12 @@ import { generateBpManifest, generateRpManifest } from '../manifest.js'
 const baseConfig: QuickStartConfig = {
   name: 'test-pack',
   version: '1.0.0',
-  template: 'default',
   uuids: {
     behaviorPack: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
     resourcePack: 'ffffffff-gggg-hhhh-iiii-jjjjjjjjjjjj',
     module: 'kkkkkkkk-llll-mmmm-nnnn-oooooooooooo',
   },
+  hasScripts: true,
   minEngineVersion: [1, 21, 0],
 }
 
@@ -26,8 +26,11 @@ describe('generateBpManifest', () => {
         version: [1, 0, 0],
         min_engine_version: [1, 21, 0],
       },
-      modules: [],
       dependencies: [
+        {
+          module_name: '@minecraft/server',
+          version: '1.18.0',
+        },
         {
           uuid: baseConfig.uuids.resourcePack,
           version: [1, 0, 0],
@@ -36,29 +39,32 @@ describe('generateBpManifest', () => {
     })
   })
 
-  it('should include script module when hasScripts is true', () => {
-    const config = { ...baseConfig, hasScripts: true }
-    const manifest = generateBpManifest(config) as Record<string, unknown>
+  it('should include script module when module UUID exists', () => {
+    const manifest = generateBpManifest(baseConfig) as Record<string, unknown>
     expect(manifest.modules).toEqual([
       {
         type: 'script',
         language: 'javascript',
-        uuid: config.uuids.module,
+        uuid: baseConfig.uuids.module,
         entry: 'scripts/main.js',
         version: [1, 0, 0],
       },
     ])
-    expect(manifest.dependencies).toContainEqual({
-      module_name: '@minecraft/server',
-      version: '1.18.0',
-    })
+  })
+
+  it('should skip script module when module UUID is missing', () => {
+    const config = {
+      ...baseConfig,
+      uuids: { behaviorPack: 'aaa', resourcePack: 'bbb' },
+    }
+    const manifest = generateBpManifest(config) as Record<string, unknown>
+    expect(manifest.modules).toEqual([])
   })
 
   it('should include resource pack dependency when resourcePack UUID exists', () => {
-    const config = { ...baseConfig, uuids: baseConfig.uuids }
-    const manifest = generateBpManifest(config) as Record<string, unknown>
+    const manifest = generateBpManifest(baseConfig) as Record<string, unknown>
     expect(manifest.dependencies).toContainEqual({
-      uuid: config.uuids.resourcePack,
+      uuid: baseConfig.uuids.resourcePack,
       version: [1, 0, 0],
     })
   })
@@ -70,6 +76,15 @@ describe('generateBpManifest', () => {
       license: 'MIT',
       url: 'https://github.com/mcbe-mods',
       authors: ['TestAuthor'],
+    })
+  })
+
+  it('should include homepage in metadata when provided', () => {
+    const config = { ...baseConfig, homepage: 'https://example.com' }
+    const manifest = generateBpManifest(config) as Record<string, unknown>
+    expect(manifest.metadata).toEqual({
+      license: 'MIT',
+      url: 'https://example.com',
     })
   })
 

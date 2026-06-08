@@ -3,6 +3,7 @@ import { join } from 'node:path'
 import process from 'node:process'
 import pc from 'picocolors'
 import { resolveEntry, runBuild } from '../core/builder.js'
+import { patchManifest } from '../core/manifest.js'
 import { createMcAddon } from '../core/packager.js'
 import { getProjectConfig, getProjectDir } from '../core/project.js'
 import { spinnerFail, spinnerStart, spinnerSucceed } from '../utils/logger.js'
@@ -11,11 +12,7 @@ const TS_FILTER = (src: string) => !src.endsWith('.ts')
 
 export async function buildCommand(options: { package?: boolean }) {
   const projectDir = getProjectDir()
-  if (!projectDir) {
-    console.error(pc.red('  ✗ No mcbe.config.json found'))
-    process.exit(1)
-  }
-
+  patchManifest(projectDir)
   const config = getProjectConfig(projectDir)
   const distDir = join(projectDir, 'dist')
   const bpOut = join(distDir, 'behavior_pack')

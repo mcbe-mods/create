@@ -3,6 +3,7 @@ import { join } from 'node:path'
 import process from 'node:process'
 import pc from 'picocolors'
 import { resolveEntry, runWatchBuild } from '../core/builder.js'
+import { patchManifest } from '../core/manifest.js'
 import { getProjectConfig, getProjectDir } from '../core/project.js'
 import { startSync } from '../core/syncer.js'
 import { spinnerFail, spinnerStart, spinnerSucceed } from '../utils/logger.js'
@@ -23,11 +24,7 @@ function syncDir(src: string, dest: string, label: string) {
 
 export async function devCommand(options: DevOptions = {}) {
   const projectDir = getProjectDir()
-  if (!projectDir) {
-    console.error(pc.red('  ✗ No mcbe.config.json found'))
-    process.exit(1)
-  }
-
+  patchManifest(projectDir)
   const config = getProjectConfig(projectDir)
   const distDir = join(projectDir, 'dist')
 
@@ -82,7 +79,7 @@ export async function devCommand(options: DevOptions = {}) {
   if (options.sync) {
     const mcPaths = getMcPaths(projectDir)
     if (!mcPaths) {
-      console.error(pc.red('  ✗ Minecraft path not found. Set MC_DEV_PATH'))
+      console.error(pc.red('  ✗ Minecraft path not found. Set MCBE_DEV_PATH'))
       process.exit(1)
     }
 
