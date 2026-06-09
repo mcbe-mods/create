@@ -26,10 +26,17 @@ Interactive prompts guide you through:
 - Template choice (when Script API is enabled)
 - Package manager (npm, pnpm, yarn)
 
-Use `--yes` to skip prompts and create with defaults (explosive-bow + BP + RP + TS):
+Use `--yes` to skip all prompts and create with defaults:
 
 ```bash
 mcbe-create init my-addon --yes
+```
+
+Use short flags to customize non-interactively:
+
+```bash
+mcbe-create init my-addon -a "Author" -d "My addon" -l js --no-scripts -k bp -y
+mcbe-create init my-addon -v 1.20.0 -p pnpm --no-install
 ```
 
 Run `init` inside an existing project to add missing packs.
@@ -70,7 +77,17 @@ mcbe-create info      # Show project information
 |-------------------|------|---------|-------------|
 | `[project-name]` | `string` | — | Project name (prompted if omitted) |
 | `-t, --template <template>` | `string` | `'default'` | Template to use (`default`, `explosive-bow`) |
-| `-y, --yes` | `boolean` | `false` | Skip prompts, use defaults |
+| `-y, --yes` | `boolean` | `false` | Skip all prompts, use defaults for unspecified fields |
+| `-a, --author <author>` | `string` | `''` | Author name |
+| `-d, --desc <desc>` | `string` | `''` | Project description |
+| `-l, --lang <lang>` | `string` | `'typescript'` | Script language (`typescript`, `javascript`) |
+| `-v, --mc-version <version>` | `string` | `'1.18.0'` | `@minecraft/server` version |
+| `-p, --pm <pm>` | `string` | auto-detected | Package manager (`npm`, `pnpm`, `yarn`) |
+| `-k, --packs <packs>` | `string` | `'bp,rp'` | Packs to include (`bp`, `rp`, comma-separated) |
+| `--no-scripts` | `boolean` | — | Disable Minecraft Script API |
+| `--no-install` | `boolean` | — | Skip dependency installation |
+| `--add-bp` | `boolean` | — | Add behavior pack to existing project |
+| `--add-rp` | `boolean` | — | Add resource pack to existing project |
 
 ### `dev`
 

@@ -19,7 +19,29 @@ program
   .option('-t, --template <template>', 'Template to use (default, explosive-bow)')
   .option('-y, --yes', 'Skip prompts, use defaults')
   .option('--no-install', 'Skip dependency installation')
-  .action(async (name: string, options: { template?: string, yes?: boolean, install?: boolean }) => {
+  .option('-a, --author <author>', 'Author name')
+  .option('-d, --desc <desc>', 'Project description')
+  .option('-l, --lang <lang>', 'Script language (typescript | javascript)')
+  .option('-v, --mc-version <version>', '@minecraft/server version')
+  .option('-p, --pm <pm>', 'Package manager (npm | pnpm | yarn)')
+  .option('-k, --packs <packs>', 'Packs to include (bp,rp)')
+  .option('--no-scripts', 'Disable Minecraft Script API')
+  .option('--add-bp', 'Add behavior pack to existing project')
+  .option('--add-rp', 'Add resource pack to existing project')
+  .action(async (name: string, options: {
+    template?: string
+    yes?: boolean
+    install?: boolean
+    author?: string
+    desc?: string
+    lang?: string
+    mcVersion?: string
+    pm?: string
+    packs?: string
+    scripts?: boolean
+    addBp?: boolean
+    addRp?: boolean
+  }) => {
     const { initCommand } = await import('./commands/init.js')
     await initCommand(name, options)
   })
