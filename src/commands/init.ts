@@ -20,6 +20,15 @@ interface InitOptions {
   template?: string
   yes?: boolean
   install?: boolean
+  author?: string
+  desc?: string
+  lang?: string
+  mcVersion?: string
+  pm?: string
+  packs?: string
+  scripts?: boolean
+  addBp?: boolean
+  addRp?: boolean
 }
 
 function detectPackageManager(): PackageManager {
@@ -64,97 +73,120 @@ function writeLang(dir: string, name: string, description: string) {
   writeFileSync(join(textsDir, 'languages.json'), JSON.stringify(['en_US'], null, 2))
 }
 
+export function parsePacks(packs?: string): PackType[] {
+  if (!packs) { return ['behavior_pack', 'resource_pack'] }
+  return packs.split(',').map((s) => {
+    const t = s.trim()
+    if (t === 'bp') { return 'behavior_pack' }
+    if (t === 'rp') { return 'resource_pack' }
+    return t as PackType
+  })
+}
+
 async function createNewProject(name: string, options: InitOptions) {
   const projectDir = join(process.cwd(), name)
 
-  let template = options.template as TemplateName | undefined
-  let author = ''
-  let description = ''
-  let packs: PackType[] = ['behavior_pack', 'resource_pack']
-  let hasScripts = true
-  let language: ScriptLanguage = 'typescript'
-  let mcVersion = '1.18.0'
-  let pm: PackageManager = detectPackageManager()
+  let packs: PackType[] = parsePacks(options.packs)
+  let hasScripts = options.scripts !== false
+  let language: ScriptLanguage = (options.lang as ScriptLanguage) || 'typescript'
+  let template: TemplateName = (options.template as TemplateName) || 'default'
+  let mcVersion = options.mcVersion || '1.18.0'
+  let pm: PackageManager = (options.pm as PackageManager) || detectPackageManager()
+  let author = options.author ?? ''
+  let description = options.desc ?? ''
+
+  const noScriptsArg = process.argv.includes('--no-scripts')
 
   if (!options.yes) {
     p.intro(pc.bold(pc.blue('Create a new Minecraft BE addon')))
 
-    packs = await p.multiselect({
-      message: 'Which packs do you need?',
-      required: true,
-      options: [
-        { value: 'behavior_pack', label: 'Behavior Pack', hint: 'Addon logic and scripts' },
-        { value: 'resource_pack', label: 'Resource Pack', hint: 'Textures, sounds, models' },
-      ],
-    }) as PackType[]
-    if (isCancel(packs)) { onCancel() }
+    if (!options.packs) {
+      packs = await p.multiselect({
+        message: 'Which packs do you need?',
+        required: true,
+        options: [
+          { value: 'behavior_pack', label: 'Behavior Pack', hint: 'Addon logic and scripts' },
+          { value: 'resource_pack', label: 'Resource Pack', hint: 'Textures, sounds, models' },
+        ],
+      }) as PackType[]
+      if (isCancel(packs)) { onCancel() }
+    }
 
     if (packs.includes('behavior_pack')) {
-      hasScripts = await p.confirm({
-        message: 'Use Minecraft Script API?',
-        initialValue: true,
-      }) as boolean
-      if (isCancel(hasScripts)) { onCancel() }
+      if (!noScriptsArg && options.scripts === undefined) {
+        hasScripts = await p.confirm({
+          message: 'Use Minecraft Script API?',
+          initialValue: true,
+        }) as boolean
+        if (isCancel(hasScripts)) { onCancel() }
+      }
 
       if (hasScripts) {
-        language = await p.select({
-          message: 'Script language:',
-          options: [
-            { value: 'typescript', label: 'TypeScript', hint: 'Requires compilation' },
-            { value: 'javascript', label: 'JavaScript', hint: 'No compilation needed' },
-          ],
-        }) as ScriptLanguage
-        if (isCancel(language)) { onCancel() }
+        if (!options.lang) {
+          language = await p.select({
+            message: 'Script language:',
+            options: [
+              { value: 'typescript', label: 'TypeScript', hint: 'Requires compilation' },
+              { value: 'javascript', label: 'JavaScript', hint: 'No compilation needed' },
+            ],
+          }) as ScriptLanguage
+          if (isCancel(language)) { onCancel() }
+        }
 
-        template = await p.select({
-          message: 'Select a template:',
-          initialValue: template || 'default',
-          options: [
-            { value: 'default', label: 'Default', hint: 'Simple event listener starter' },
-            { value: 'explosive-bow', label: 'Explosive Bow', hint: 'Bow that spawns exploding crystals' },
-          ],
-        }) as TemplateName
-        if (isCancel(template)) { onCancel() }
+        if (!options.template) {
+          template = await p.select({
+            message: 'Select a template:',
+            initialValue: template,
+            options: [
+              { value: 'default', label: 'Default', hint: 'Simple event listener starter' },
+              { value: 'explosive-bow', label: 'Explosive Bow', hint: 'Bow that spawns exploding crystals' },
+            ],
+          }) as TemplateName
+          if (isCancel(template)) { onCancel() }
+        }
 
-        mcVersion = await p.text({
-          message: '@minecraft/server version:',
-          placeholder: mcVersion,
-          initialValue: mcVersion,
-        }) as string
-        if (isCancel(mcVersion)) { onCancel() }
+        if (!options.mcVersion) {
+          mcVersion = await p.text({
+            message: '@minecraft/server version:',
+            placeholder: mcVersion,
+            initialValue: mcVersion,
+          }) as string
+          if (isCancel(mcVersion)) { onCancel() }
+        }
       }
     }
 
-    pm = await p.select({
-      message: 'Package manager:',
-      initialValue: pm,
-      options: [
-        { value: 'npm', label: 'npm' },
-        { value: 'pnpm', label: 'pnpm' },
-        { value: 'yarn', label: 'yarn' },
-      ],
-    }) as PackageManager
-    if (isCancel(pm)) { onCancel() }
+    if (!options.pm) {
+      pm = await p.select({
+        message: 'Package manager:',
+        initialValue: pm,
+        options: [
+          { value: 'npm', label: 'npm' },
+          { value: 'pnpm', label: 'pnpm' },
+          { value: 'yarn', label: 'yarn' },
+        ],
+      }) as PackageManager
+      if (isCancel(pm)) { onCancel() }
+    }
 
-    author = await p.text({
-      message: 'Author:',
-      placeholder: 'Your name',
-    }) as string
-    if (isCancel(author)) { onCancel() }
+    if (!options.author) {
+      author = await p.text({
+        message: 'Author:',
+        placeholder: 'Your name',
+      }) as string
+      if (isCancel(author)) { onCancel() }
+    }
 
-    description = await p.text({
-      message: 'Description:',
-      placeholder: 'My Minecraft BE addon',
-    }) as string
-    if (isCancel(description)) { onCancel() }
+    if (!options.desc) {
+      description = await p.text({
+        message: 'Description:',
+        placeholder: 'My Minecraft BE addon',
+      }) as string
+      if (isCancel(description)) { onCancel() }
+    }
 
     p.outro('Creating project...')
   }
-  else {
-    template = template || 'explosive-bow'
-  }
-
-  template = template || 'default'
 
   const newUuids = generateUUIDs()
   const mcbeConfig: McbeConfig = {
@@ -253,7 +285,7 @@ async function createNewProject(name: string, options: InitOptions) {
   console.log()
 }
 
-async function reinitProject(projectDir: string) {
+async function reinitProject(projectDir: string, options: InitOptions) {
   const config = getProjectConfig(projectDir)
   const hasBp = existsSync(join(projectDir, 'src', 'behavior_pack'))
   const hasRp = existsSync(join(projectDir, 'src', 'resource_pack'))
@@ -269,13 +301,26 @@ async function reinitProject(projectDir: string) {
 
   const additions: string[] = []
   const uuids = config.uuids
+  const noScriptsArg = process.argv.includes('--no-scripts')
 
   if (!hasBp) {
-    const addBp = await p.confirm({
-      message: 'Add Behavior Pack?',
-      initialValue: true,
-    })
-    if (isCancel(addBp)) { onCancel() }
+    let addBp: boolean
+
+    if (options.addBp !== undefined) {
+      addBp = options.addBp
+    }
+    else if (options.yes) {
+      addBp = false
+    }
+    else {
+      const confirmAddBp = await p.confirm({
+        message: 'Add Behavior Pack?',
+        initialValue: true,
+      })
+      if (isCancel(confirmAddBp)) { onCancel() }
+      addBp = confirmAddBp as boolean
+    }
+
     if (addBp) {
       additions.push('behavior_pack')
       const newUuids = generateUUIDs()
@@ -283,20 +328,42 @@ async function reinitProject(projectDir: string) {
         uuids: { behaviorPack: newUuids.behaviorPack, module: newUuids.module },
       })
 
-      const addScripts = await p.confirm({
-        message: 'Use Minecraft Script API?',
-        initialValue: true,
-      })
-      if (isCancel(addScripts)) { onCancel() }
+      let addScripts: boolean
+
+      if (options.scripts !== undefined || noScriptsArg) {
+        addScripts = options.scripts !== false
+      }
+      else if (options.yes) {
+        addScripts = true
+      }
+      else {
+        const confirmScripts = await p.confirm({
+          message: 'Use Minecraft Script API?',
+          initialValue: true,
+        })
+        if (isCancel(confirmScripts)) { onCancel() }
+        addScripts = confirmScripts as boolean
+      }
+
       if (addScripts) {
-        const lang = await p.select({
-          message: 'Script language:',
-          options: [
-            { value: 'typescript', label: 'TypeScript' },
-            { value: 'javascript', label: 'JavaScript' },
-          ],
-        }) as ScriptLanguage
-        if (isCancel(lang)) { onCancel() }
+        let lang: ScriptLanguage
+
+        if (options.lang) {
+          lang = options.lang as ScriptLanguage
+        }
+        else if (options.yes) {
+          lang = 'typescript'
+        }
+        else {
+          lang = await p.select({
+            message: 'Script language:',
+            options: [
+              { value: 'typescript', label: 'TypeScript' },
+              { value: 'javascript', label: 'JavaScript' },
+            ],
+          }) as ScriptLanguage
+          if (isCancel(lang)) { onCancel() }
+        }
 
         const bpDir = join(projectDir, 'src', 'behavior_pack')
         mkdirSync(bpDir, { recursive: true })
@@ -328,11 +395,23 @@ async function reinitProject(projectDir: string) {
   }
 
   if (!hasRp) {
-    const addRp = await p.confirm({
-      message: 'Add Resource Pack?',
-      initialValue: true,
-    })
-    if (isCancel(addRp)) { onCancel() }
+    let addRp: boolean
+
+    if (options.addRp !== undefined) {
+      addRp = options.addRp
+    }
+    else if (options.yes) {
+      addRp = false
+    }
+    else {
+      const confirmAddRp = await p.confirm({
+        message: 'Add Resource Pack?',
+        initialValue: true,
+      })
+      if (isCancel(confirmAddRp)) { onCancel() }
+      addRp = confirmAddRp as boolean
+    }
+
     if (addRp) {
       additions.push('resource_pack')
       if (!uuids.resourcePack) {
@@ -360,7 +439,7 @@ export async function initCommand(name: string | undefined, options: InitOptions
     const existingProjectDir = getProjectDir()
 
     if (existingProjectDir) {
-      await reinitProject(existingProjectDir)
+      await reinitProject(existingProjectDir, options)
       return
     }
   }
